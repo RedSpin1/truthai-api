@@ -2,7 +2,7 @@ export async function handler(event) {
   const headers = {
     "Access-Control-Allow-Origin": "https://truthai.online",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Content-Type": "application/json"
   };
 
@@ -48,6 +48,50 @@ export async function handler(event) {
       headers,
       body: JSON.stringify({ error: "No text provided" })
     };
+  }
+
+  const authHeader = event.headers.authorization || event.headers.Authorization || "";
+  const idToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
+
+  if (idToken) {
+    try {
+      const verifyResponse = await fetch(
+        "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyBTfH0NhDeTmxjhwjxYgr7YzK4V4zQrcI4",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken })
+        }
+      );
+
+      const verifyData = await verifyResponse.json();
+
+      if (!verifyResponse.ok || !verifyData.users?.length) {
+        return {
+          statusCode: 401,
+          headers,
+          body: JSON.stringify({ error: "Invalid login session" })
+        };
+      }
+
+      const user = verifyData.users[0];
+      const providers = user.providerUserInfo || [];
+      const signedInWithGoogle = providers.some(provider => provider.providerId === "google.com");
+
+      if (!signedInWithGoogle && !user.emailVerified) {
+        return {
+          statusCode: 403,
+          headers,
+          body: JSON.stringify({ error: "Email verification required" })
+        };
+      }
+    } catch {
+      return {
+        statusCode: 401,
+        headers,
+        body: JSON.stringify({ error: "Could not verify login session" })
+      };
+    }
   }
 
   try {
