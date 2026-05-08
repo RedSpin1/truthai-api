@@ -59,9 +59,7 @@ export async function handler(event) {
         "https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyBTfH0NhDeTmxjhwjxYgr7YzK4V4zQrcI4",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken })
         }
       );
@@ -78,9 +76,7 @@ export async function handler(event) {
 
       const user = verifyData.users[0];
       const providers = user.providerUserInfo || [];
-      const signedInWithGoogle = providers.some(
-        provider => provider.providerId === "google.com"
-      );
+      const signedInWithGoogle = providers.some(provider => provider.providerId === "google.com");
 
       if (!signedInWithGoogle && !user.emailVerified) {
         return {
@@ -112,29 +108,7 @@ export async function handler(event) {
             {
               parts: [
                 {
-                  text: `Act as a forensic writing expert.
-
-Analyze this text for signs of AI generation.
-
-Return raw JSON only. Do not use markdown code blocks.
-
-Use this exact JSON format:
-
-{
-  "title": "2 to 4 word scan title",
-  "result": "**Verdict:** <Human or AI>\\n\\n**Likelihood:** <percentage>\\n\\n**Justification:** <one sentence explanation>"
-}
-
-Rules:
-- The title must be 2 to 4 words.
-- The title should describe the topic of the text.
-- Do not mention the title inside the result.
-- Do not return anything outside the JSON.
-- The result must stay simple and easy to understand.
-- The likelihood must include a percentage.
-
-Text:
-${text}`
+                  text: `Act as a forensic writing expert. Analyze this text for signs of AI generation. Provide a verdict (Human or AI), a percentage likelihood, and a one-sentence justification:\n\n${text}`
                 }
               ]
             }
@@ -155,34 +129,10 @@ ${text}`
       };
     }
 
-    const rawText =
-      data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-
-    const cleanedText = rawText
-      .trim()
-      .replace(/^```json\s*/i, "")
-      .replace(/^```\s*/i, "")
-      .replace(/```$/i, "")
-      .trim();
-
-    let parsed;
-
-    try {
-      parsed = JSON.parse(cleanedText);
-    } catch {
-      parsed = {
-        title: "Untitled Scan",
-        result: cleanedText || rawText || "Error retrieving analysis."
-      };
-    }
-
     return {
       statusCode: 200,
       headers,
-      body: JSON.stringify({
-        title: parsed.title || "Untitled Scan",
-        result: parsed.result || "Error retrieving analysis."
-      })
+      body: JSON.stringify(data)
     };
   } catch {
     return {
