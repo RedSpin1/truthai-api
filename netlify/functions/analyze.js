@@ -116,7 +116,9 @@ export async function handler(event) {
 
 Analyze this text for signs of AI generation.
 
-Return ONLY valid JSON in this exact format:
+Return raw JSON only. Do not use markdown code blocks.
+
+Use this exact JSON format:
 
 {
   "title": "2 to 4 word scan title",
@@ -156,14 +158,21 @@ ${text}`
     const rawText =
       data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
+    const cleanedText = rawText
+      .trim()
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/```$/i, "")
+      .trim();
+
     let parsed;
 
     try {
-      parsed = JSON.parse(rawText);
+      parsed = JSON.parse(cleanedText);
     } catch {
       parsed = {
         title: "Untitled Scan",
-        result: rawText || "Error retrieving analysis."
+        result: cleanedText || rawText || "Error retrieving analysis."
       };
     }
 
